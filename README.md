@@ -32,6 +32,20 @@ foreach ($init->execute() as $event) {
 $init->result()->throw();
 ```
 
+Validate a template without creating an image:
+
+```php
+$validate = $packer->validate('/workspace/image.pkr.hcl')
+    ->variableFile('/workspace/production.pkrvars.hcl')
+    ->only('amazon-ebs.main');
+
+foreach ($validate->execute() as $event) {
+    // Handle validation output while Packer is running.
+}
+
+$validate->result()->throw();
+```
+
 Build an image:
 
 ```php
@@ -72,6 +86,14 @@ echo $packer->version();
 
 Every pending command provides `workingDirectory()`, `environment()`, `environmentVariable()`, and `timeout()`. Init commands add `force()` and `upgrade()`.
 
+Validate commands additionally provide:
+
+- `variable()`, `variables()`, `variableFile()`, and `variableFiles()`
+- `only()` and `except()`
+- `syntaxOnly()`, `evaluateDataSources()`, and `warnOnUndeclaredVariables()`
+
+Packer warns about undeclared variables during validation by default. Pass `false` to `warnOnUndeclaredVariables()` to disable those warnings.
+
 Build commands additionally provide:
 
 - `variable()`, `variables()`, `variableFile()`, and `variableFiles()`
@@ -107,7 +129,7 @@ try {
 }
 ```
 
-Calling `result()` too early throws `PackerResultNotReadyException`. A missing default executable throws from `init()`, `build()`, or `version()`, while a process start failure throws from `execute()`.
+Calling `result()` too early throws `PackerResultNotReadyException`. A missing default executable throws from `init()`, `validate()`, `build()`, or `version()`, while a process start failure throws from `execute()`.
 
 ## Cancellation
 
