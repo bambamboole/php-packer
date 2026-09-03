@@ -5,6 +5,7 @@ namespace Bambamboole\Packer;
 
 use Bambamboole\Packer\Commands\PendingBuildCommand;
 use Bambamboole\Packer\Commands\PendingInitCommand;
+use Bambamboole\Packer\Commands\PendingValidateCommand;
 use Bambamboole\Packer\Exceptions\PackerExecutableNotFoundException;
 use Illuminate\Process\Factory;
 use Symfony\Component\Process\ExecutableFinder;
@@ -31,6 +32,16 @@ final class Packer
     public function init(string $template): PendingInitCommand
     {
         return new PendingInitCommand(
+            $template,
+            $this->process,
+            $this->executable(),
+            $this->cancellationGraceSeconds,
+        );
+    }
+
+    public function validate(string $template): PendingValidateCommand
+    {
+        return new PendingValidateCommand(
             $template,
             $this->process,
             $this->executable(),
