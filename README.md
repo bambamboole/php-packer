@@ -1,6 +1,6 @@
 # PHP Packer
 
-A small PHP API for running [HashiCorp Packer](https://developer.hashicorp.com/packer) builds and consuming their output as a stream of typed events.
+A small PHP API for running [HashiCorp Packer](https://developer.hashicorp.com/packer) commands and consuming their output as a stream of typed events.
 
 ## Requirements
 
@@ -15,14 +15,29 @@ composer require bambamboole/php-packer
 
 ## Usage
 
-`build()` creates a pending command. Packer starts when `execute()` is called and yields events as output arrives:
+Packer commands are configured before execution. The process starts when `execute()` is called and yields events as output arrives.
+
+Initialize the plugins required by a template:
+
+```php
+use Bambamboole\Packer\Packer;
+
+$packer = new Packer;
+$init = $packer->init('/workspace')->upgrade();
+
+foreach ($init->execute() as $event) {
+    // Handle the event while Packer is running.
+}
+
+$init->result()->throw();
+```
+
+Build an image:
 
 ```php
 use Bambamboole\Packer\Events\UiEvent;
-use Bambamboole\Packer\Packer;
 
-$build = (new Packer)
-    ->build('/workspace/image.pkr.hcl')
+$build = $packer->build('/workspace/image.pkr.hcl')
     ->workingDirectory('/workspace')
     ->variables([
         'region' => 'eu-west-1',
@@ -55,9 +70,10 @@ $packer = new Packer(
 echo $packer->version();
 ```
 
-The fluent build API provides:
+Every pending command provides `workingDirectory()`, `environment()`, `environmentVariable()`, and `timeout()`. Init commands add `force()` and `upgrade()`.
 
-- `workingDirectory()`, `environment()`, `environmentVariable()`, and `timeout()`
+Build commands additionally provide:
+
 - `variable()`, `variables()`, `variableFile()`, and `variableFiles()`
 - `only()` and `except()`
 - `force()`, `onError()`, `parallelBuilds()`, `warnOnUndeclaredVariables()`, and `skipEnforcement()`
@@ -91,7 +107,7 @@ try {
 }
 ```
 
-Calling `result()` too early throws `PackerResultNotReadyException`. A missing default executable throws from `build()` or `version()`, while a process start failure throws from `execute()`.
+Calling `result()` too early throws `PackerResultNotReadyException`. A missing default executable throws from `init()`, `build()`, or `version()`, while a process start failure throws from `execute()`.
 
 ## Cancellation
 

@@ -1,10 +1,11 @@
 <?php
 declare(strict_types=1);
 
+use Bambamboole\Packer\Commands\PendingCommand;
 use Bambamboole\Packer\Data\PackerResult;
 use Bambamboole\Packer\Events\DiagnosticEvent;
 use Bambamboole\Packer\Events\UiEvent;
-use Bambamboole\Packer\Exceptions\PackerBuildFailedException;
+use Bambamboole\Packer\Exceptions\PackerCommandFailedException;
 use Bambamboole\Packer\Exceptions\PackerInterruptedException;
 use Bambamboole\Packer\Exceptions\PackerProcessException;
 use Bambamboole\Packer\Exceptions\PackerProcessStartException;
@@ -96,11 +97,11 @@ it('assembles multiple artifacts and build errors into the result', function () 
         ->and($result->artifacts[2]->target)->toBe('docker')
         ->and($result->errors)->toHaveCount(1)
         ->and($result->errors[0]->message)->toBe('plugin failed')
-        ->and(fn () => $result->throw())->toThrow(PackerBuildFailedException::class);
+        ->and(fn () => $result->throw())->toThrow(PackerCommandFailedException::class);
 
     try {
         $result->throw();
-    } catch (PackerBuildFailedException $exception) {
+    } catch (PackerCommandFailedException $exception) {
         expect($exception->result)->toBe($result);
     }
 });
@@ -154,7 +155,7 @@ it('supports explicit cancellation before consuming events', function () {
         ->build('image.pkr.hcl');
     $events = $build->execute();
 
-    $executionProperty = new ReflectionProperty($build, 'execution');
+    $executionProperty = new ReflectionProperty(PendingCommand::class, 'execution');
     $execution = $executionProperty->getValue($build);
     $processProperty = new ReflectionProperty(CommandExecution::class, 'process');
     $invokedProcess = $processProperty->getValue($execution);

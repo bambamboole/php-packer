@@ -3,29 +3,11 @@ declare(strict_types=1);
 
 namespace Bambamboole\Packer\Commands;
 
-use Bambamboole\Packer\Data\PackerResult;
 use Bambamboole\Packer\Enums\OnError;
-use Bambamboole\Packer\Enums\OutputStream;
-use Bambamboole\Packer\Events\Event;
-use Bambamboole\Packer\Exceptions\PackerCommandAlreadyExecutedException;
-use Bambamboole\Packer\Exceptions\PackerProcessStartException;
-use Bambamboole\Packer\Exceptions\PackerResultNotReadyException;
-use Bambamboole\Packer\Support\CommandExecution;
-use Illuminate\Process\Factory;
 use InvalidArgumentException;
-use SplQueue;
-use Throwable;
-use Traversable;
 
-final class PendingBuildCommand
+final class PendingBuildCommand extends PendingCommand
 {
-    private ?string $workingDirectory = null;
-
-    /** @var array<string, string|false> */
-    private array $environment = [];
-
-    private int $timeout = 3600;
-
     /** @var array<string, string> */
     private array $variables = [];
 
@@ -47,72 +29,6 @@ final class PendingBuildCommand
     private bool $warnOnUndeclaredVariables = false;
 
     private bool $skipEnforcement = false;
-
-    private bool $executed = false;
-
-    private ?CommandExecution $execution = null;
-
-    /** @internal */
-    public function __construct(
-        private readonly string $template,
-        private readonly Factory $process,
-        private readonly string $executablePath,
-        private readonly float $cancellationGraceSeconds,
-    ) {
-        if (trim($template) === '') {
-            throw new InvalidArgumentException('The Packer template cannot be empty.');
-        }
-    }
-
-    public function workingDirectory(string $workingDirectory): self
-    {
-        $this->ensureNotExecuted();
-
-        if (trim($workingDirectory) === '') {
-            throw new InvalidArgumentException('The working directory cannot be empty.');
-        }
-
-        $this->workingDirectory = trim($workingDirectory);
-
-        return $this;
-    }
-
-    /** @param array<array-key, mixed> $environment */
-    public function environment(array $environment): self
-    {
-        $this->ensureNotExecuted();
-        $normalized = [];
-
-        foreach ($environment as $name => $value) {
-            if (! is_string($name) || trim($name) === '' || (! is_string($value) && $value !== false)) {
-                throw new InvalidArgumentException('Environment must contain non-empty string keys and string or false values.');
-            }
-
-            $normalized[$name] = $value;
-        }
-
-        $this->environment = array_replace($this->environment, $normalized);
-
-        return $this;
-    }
-
-    public function environmentVariable(string $name, string|false $value): self
-    {
-        return $this->environment([$name => $value]);
-    }
-
-    public function timeout(int $seconds): self
-    {
-        $this->ensureNotExecuted();
-
-        if ($seconds <= 0) {
-            throw new InvalidArgumentException('The build timeout must be greater than zero.');
-        }
-
-        $this->timeout = $seconds;
-
-        return $this;
-    }
 
     /** @param array<array-key, mixed> $variables */
     public function variables(array $variables): self
@@ -212,95 +128,16 @@ final class PendingBuildCommand
         return $this;
     }
 
-    /** @return Traversable<int, Event> */
-    public function execute(): Traversable
+    /** @return non-empty-string */
+    protected function commandName(): string
     {
-        $this->ensureNotExecuted();
-        $this->executed = true;
-
-        $pending = $this->process
-            ->newPendingProcess()
-            ->timeout($this->timeout)
-            ->env($this->environment)
-            ->tty(false);
-
-        if ($this->workingDirectory !== null) {
-            $pending->path($this->workingDirectory);
-        }
-
-        /** @var SplQueue<array{OutputStream, string}> $chunks */
-        $chunks = new SplQueue;
-        $startedAtNanoseconds = hrtime(true);
-
-        try {
-            $process = $pending->start(
-                $this->arguments(),
-                static function (string $type, string $data) use ($chunks): void {
-                    $stream = $type === OutputStream::Stdout->value
-                        ? OutputStream::Stdout
-                        : OutputStream::Stderr;
-
-                    $chunks->enqueue([$stream, $data]);
-                },
-            );
-        } catch (Throwable $exception) {
-            throw new PackerProcessStartException(
-                'Unable to start the Packer process: '.$exception->getMessage(),
-                0,
-                $exception,
-            );
-        }
-
-        $this->execution = new CommandExecution(
-            $process,
-            $chunks,
-            $this->cancellationGraceSeconds,
-            $startedAtNanoseconds,
-        );
-
-        return $this->execution->events();
-    }
-
-    public function result(): PackerResult
-    {
-        if ($this->execution === null) {
-            throw new PackerResultNotReadyException('The Packer result is not available until the command has completed.');
-        }
-
-        return $this->execution->result();
-    }
-
-    public function cancel(): void
-    {
-        $this->execution?->cancel();
-    }
-
-    private function ensureNotExecuted(): void
-    {
-        if ($this->executed) {
-            throw new PackerCommandAlreadyExecutedException('The Packer command has already been executed.');
-        }
-    }
-
-    /**
-     * @param  list<string>  $values
-     * @return list<string>
-     */
-    private function validatedStrings(array $values, string $label): array
-    {
-        foreach ($values as $value) {
-            if (trim($value) === '') {
-                throw new InvalidArgumentException("{$label} must contain non-empty strings.");
-            }
-        }
-
-        return $values;
+        return 'build';
     }
 
     /** @return list<string> */
-    private function arguments(): array
+    protected function commandOptions(): array
     {
-        $arguments = [$this->executablePath, 'build', '-machine-readable'];
+        $arguments = [];
 
         if ($this->force) {
             $arguments[] = '-force';
@@ -343,8 +180,6 @@ final class PendingBuildCommand
         if ($this->skipEnforcement) {
             $arguments[] = '-skip-enforcement';
         }
-
-        $arguments[] = trim($this->template);
 
         return $arguments;
     }
