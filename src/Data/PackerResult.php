@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Bambamboole\Packer\Data;
 
-use Bambamboole\Packer\Exceptions\PackerBuildFailedException;
+use Bambamboole\Packer\Exceptions\PackerCommandFailedException;
 use Bambamboole\Packer\Exceptions\PackerInterruptedException;
 use Bambamboole\Packer\Exceptions\PackerProcessException;
 use Bambamboole\Packer\Exceptions\PackerTimedOutException;
@@ -52,6 +52,6 @@ final readonly class PackerResult
             throw new PackerProcessException($this);
         }
 
-        throw new PackerBuildFailedException($this);
+        throw new PackerCommandFailedException($this);
     }
 }

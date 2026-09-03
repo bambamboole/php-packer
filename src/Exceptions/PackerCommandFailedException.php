@@ -5,12 +5,12 @@ namespace Bambamboole\Packer\Exceptions;
 
 use Bambamboole\Packer\Data\PackerResult;
 
-final class PackerBuildFailedException extends PackerResultException
+final class PackerCommandFailedException extends PackerResultException
 {
     public function __construct(PackerResult $result)
     {
         $exitCode = $result->exitCode === null ? 'unknown' : (string) $result->exitCode;
 
-        parent::__construct("Packer build failed with exit code {$exitCode}.", $result);
+        parent::__construct("Packer command failed with exit code {$exitCode}.", $result);
     }
 }
