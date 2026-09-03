@@ -1,0 +1,54 @@
+{
+    "name": "bambamboole/php-packer",
+    "description": "An object-oriented PHP API for interacting with HashiCorp Packer.",
+    "keywords": [
+        "bambamboole",
+        "hashicorp",
+        "infrastructure",
+        "packer"
+    ],
+    "homepage": "https://github.com/bambamboole/php-packer",
+    "license": "MIT",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Manuel Christlieb",
+            "email": "manuel@christlieb.eu"
+        }
+    ],
+    "require": {
+        "php": "^8.4",
+        "illuminate/process": "^13.0",
+        "symfony/process": "^7.4.5 || ^8.0.5"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.16",
+        "pestphp/pest": "^3.8",
+        "pestphp/pest-plugin-type-coverage": "^3.6",
+        "phpstan/phpstan": "^2.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "Bambamboole\\Packer\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "analyse": "vendor/bin/phpstan analyse",
+        "lint": "vendor/bin/pint",
+        "test": "vendor/bin/pest",
+        "test:coverage": "vendor/bin/pest --coverage",
+        "test:lint": "vendor/bin/pint --test",
+        "test:type-coverage": "vendor/bin/pest --type-coverage"
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        },
+        "sort-packages": true
+    }
+}
